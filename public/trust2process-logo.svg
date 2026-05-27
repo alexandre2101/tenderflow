@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160" fill="none">
+  <!-- Trust -->
+  <text x="12" y="88" font-family="'Arial Black', 'Arial Bold', Arial, sans-serif" font-weight="900" font-size="72" fill="#1a3a8f">Trust</text>
+  <!-- 2 (red) -->
+  <text x="196" y="88" font-family="'Arial Black', 'Arial Bold', Arial, sans-serif" font-weight="900" font-size="72" fill="#cc2222">2</text>
+  <!-- Process -->
+  <text x="12" y="152" font-family="'Arial Black', 'Arial Bold', Arial, sans-serif" font-weight="900" font-size="72" fill="#1a3a8f">Process</text>
+  <!-- Red square dot -->
+  <rect x="274" y="96" width="22" height="22" fill="#cc2222"/>
+</svg>
