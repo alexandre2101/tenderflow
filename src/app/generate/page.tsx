@@ -144,6 +144,37 @@ export default function GeneratePage() {
       if (y + needed > H - 18) { doc.addPage(); y = M; }
     };
 
+    // Dynamic-height table row: auto-wraps text and expands row height
+    const dynRow = (
+      colDefs: { x: number; w: number }[],
+      cells: string[],
+      ri: number,
+      fontSize = 8.5,
+      dividers: number[] = []
+    ) => {
+      const LH = 4.8;
+      const PAD = 2.5;
+      doc.setFontSize(fontSize);
+      const splitCells = colDefs.map((col, i) =>
+        doc.splitTextToSize(cells[i] ?? "", col.w)
+      );
+      const maxLines = Math.max(...splitCells.map((s: string[]) => s.length), 1);
+      const rowH = Math.max(8, maxLines * LH + PAD * 2);
+      checkY(rowH + 2);
+      doc.setFillColor(ri % 2 === 0 ? 247 : 255, ri % 2 === 0 ? 249 : 255, 255);
+      doc.rect(M, y, CW, rowH, "F");
+      doc.setDrawColor(215, 225, 240); doc.setLineWidth(0.1);
+      doc.line(M, y + rowH, W - M, y + rowH);
+      dividers.forEach(dx => doc.line(M + dx, y, M + dx, y + rowH));
+      doc.setFont("helvetica", "normal"); bodyC();
+      splitCells.forEach((lines: string[], ci: number) => {
+        lines.forEach((line: string, li: number) => {
+          doc.text(line, M + colDefs[ci].x, y + PAD + LH * li + 3.5);
+        });
+      });
+      y += rowH;
+    };
+
     const tableHeader = (cols: { label: string; x: number }[], maxW = CW) => {
       doc.setFillColor(41, 65, 122);
       doc.rect(M, y, maxW, 8, "F");
@@ -239,16 +270,9 @@ export default function GeneratePage() {
       ["Coûts de maintenance élevés", "20-30% des coûts évitables avec une maintenance prédictive bien calibrée"],
       ["Absence de jumeaux numériques", "Optimisation empirique des paramètres — pas de simulation avant intervention"],
       ["Intégration du Grand Paris Green", "Nouveaux actifs solaires urbains à intégrer dans l'écosystème existant"],
-    ].forEach((row, i) => {
-      doc.setFillColor(i % 2 === 0 ? 247 : 255, i % 2 === 0 ? 249 : 255, 255);
-      doc.rect(M, y, CW, 8, "F");
-      doc.setDrawColor(215, 225, 240); doc.setLineWidth(0.1);
-      doc.line(M, y + 8, W - M, y + 8); doc.line(M + 73, y, M + 73, y + 8);
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); bodyC();
-      doc.text(row[0], M + 3, y + 5.5, { maxWidth: 68 });
-      doc.text(row[1], M + 76, y + 5.5, { maxWidth: CW - 79 });
-      y += 8;
-    });
+    ].forEach((row, i) =>
+      dynRow([{ x: 3, w: 68 }, { x: 76, w: CW - 79 }], row, i, 8.5, [73])
+    );
     y += 6;
 
     sectionTitle("3", "APPROCHE MÉTHODOLOGIQUE — EnergyDigital360");
@@ -266,18 +290,12 @@ export default function GeneratePage() {
       ["Phase 3", "Jumeaux Numériques pilote", "Sem. 15–24", "3 parcs éoliens modélisés et validés"],
       ["Phase 4", "Modèles IA production", "Sem. 20–32", "Prédiction J+1 à J+90, maint. prédictive"],
       ["Phase 5", "Déploiement & Transfert", "Sem. 40–52", "Go-live, formation, documentation"],
-    ].forEach((row, i) => {
-      doc.setFillColor(i % 2 === 0 ? 247 : 255, i % 2 === 0 ? 249 : 255, 255);
-      doc.rect(M, y, CW, 8, "F");
-      doc.setDrawColor(215, 225, 240); doc.setLineWidth(0.1);
-      doc.line(M, y + 8, W - M, y + 8);
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); bodyC();
-      doc.text(row[0], M + 3, y + 5.5);
-      doc.text(row[1], M + 22, y + 5.5, { maxWidth: 72 });
-      doc.text(row[2], M + 98, y + 5.5);
-      doc.text(row[3], M + 125, y + 5.5, { maxWidth: CW - 128 });
-      y += 8;
-    });
+    ].forEach((row, i) =>
+      dynRow(
+        [{ x: 3, w: 17 }, { x: 22, w: 72 }, { x: 97, w: 25 }, { x: 124, w: CW - 127 }],
+        row, i
+      )
+    );
 
     footer(2);
 
@@ -300,7 +318,6 @@ export default function GeneratePage() {
     });
 
     sectionTitle("5", "COMPOSITION DE L'ÉQUIPE PROJET");
-    const tc = [36, 46, 16, 62, 14];
     tableHeader([
       { label: "Consultant", x: 3 },
       { label: "Rôle", x: 39 },
@@ -317,20 +334,12 @@ export default function GeneratePage() {
       ["Laure SIMON", "Experte Maintenance Préd.", "6 ans", "Condition monitoring, CMMS, SAP PM, FMEA", "80%"],
       ["Nicolas DUPONT", "DevOps / Cloud", "5 ans", "Azure, Kubernetes, CI/CD, Terraform", "80%"],
       ["Emma FORESTIER", "Consultant Change Mgmt", "6 ans", "Formation, documentation technique", "60%"],
-    ].forEach((row, ri) => {
-      checkY(9);
-      doc.setFillColor(ri % 2 === 0 ? 247 : 255, ri % 2 === 0 ? 249 : 255, 255);
-      doc.rect(M, y, CW, 8, "F");
-      doc.setDrawColor(215, 225, 240); doc.setLineWidth(0.1);
-      doc.line(M, y + 8, W - M, y + 8);
-      doc.setFontSize(8); doc.setFont("helvetica", "normal"); bodyC();
-      let cx = M + 3;
-      row.forEach((cell, i) => {
-        doc.text(cell, cx, y + 5.5, { maxWidth: tc[i] - 3 });
-        cx += tc[i];
-      });
-      y += 8;
-    });
+    ].forEach((row, ri) =>
+      dynRow(
+        [{ x: 3, w: 33 }, { x: 39, w: 43 }, { x: 85, w: 16 }, { x: 103, w: 57 }, { x: 162, w: 11 }],
+        row, ri, 8
+      )
+    );
 
     footer(3);
 
