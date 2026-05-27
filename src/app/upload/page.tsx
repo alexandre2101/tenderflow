@@ -20,11 +20,8 @@ import {
   Brain,
   BookOpen,
   Copy,
-  Download,
-  Presentation,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { generateTenderPptx } from "@/lib/generate-pptx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -174,114 +171,6 @@ export default function UploadPage() {
     navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 1800);
-  };
-
-  const downloadMc2iPdf = async () => {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const margin = 18;
-    const contentW = 210 - margin * 2;
-    let y = 18;
-
-    // Header
-    doc.setFillColor(13, 27, 62);
-    doc.rect(0, 0, 210, 14, "F");
-    doc.setFillColor(197, 40, 28);
-    doc.rect(0, 0, 6, 14, "F");
-    doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
-    doc.text("mc2i", margin, 9.5);
-    doc.setFontSize(8); doc.setFont("helvetica", "normal");
-    doc.text("PROPOSITION TECHNIQUE — CONFIDENTIEL", 210 - margin, 9.5, { align: "right" });
-    y = 22;
-
-    // Title block
-    doc.setFillColor(197, 40, 28); doc.rect(margin, y, 3, 16, "F");
-    doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(13, 27, 62);
-    doc.text(engieAO.title, margin + 6, y + 6, { maxWidth: contentW - 6 });
-    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(107, 114, 128);
-    doc.text(`${engieAO.client} — Réf. ${mc2iResponse.reference}`, margin + 6, y + 13);
-    y += 24;
-
-    // Summary chips
-    doc.setFillColor(232, 240, 254); doc.setDrawColor(199, 210, 254);
-    doc.roundedRect(margin, y, contentW, 16, 2, 2, "FD");
-    doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(13, 27, 62);
-    doc.text("Méthodologie :", margin + 3, y + 6); doc.text("Planning :", margin + 60, y + 6); doc.text("Budget :", margin + 110, y + 6);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(79, 70, 229);
-    doc.text(mc2iResponse.methodology, margin + 3, y + 12);
-    doc.text(mc2iResponse.phases, margin + 60, y + 12);
-    doc.text(mc2iResponse.totalBudget, margin + 110, y + 12);
-    y += 22;
-
-    const section = (title: string) => {
-      doc.setFillColor(232, 240, 254);
-      doc.rect(margin, y, contentW, 8, "F");
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(13, 27, 62);
-      doc.text(title, margin + 3, y + 5.5);
-      y += 11;
-    };
-
-    const bodyText = (text: string) => {
-      doc.setFontSize(9.5); doc.setFont("helvetica", "normal"); doc.setTextColor(55, 65, 81);
-      const lines = doc.splitTextToSize(text, contentW);
-      lines.forEach((line: string) => {
-        if (y > 272) { doc.addPage(); y = 20; }
-        doc.text(line, margin, y); y += 4.8;
-      });
-      y += 4;
-    };
-
-    section("MODULES IA PROPOSÉS");
-    mc2iResponse.modules.forEach((mod) => {
-      doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(79, 70, 229);
-      if (y > 272) { doc.addPage(); y = 20; }
-      doc.text(`${mod.id} — ${mod.title} (${mod.accuracy})`, margin, y); y += 5;
-      bodyText(mod.description);
-    });
-
-    section("MÉTHODOLOGIE");
-    bodyText(mc2iResponse.methodologyText);
-
-    section("STAFFING");
-    bodyText(mc2iResponse.staffingText);
-
-    section("ÉLÉMENTS DIFFÉRENCIANTS");
-    bodyText(mc2iResponse.differentiators);
-
-    const pages = doc.getNumberOfPages();
-    for (let p = 1; p <= pages; p++) {
-      doc.setPage(p);
-      doc.setFillColor(13, 27, 62); doc.rect(0, 285, 210, 12, "F");
-      doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(156, 163, 175);
-      doc.text(`mc2i TenderFlow — ${new Date().toLocaleDateString("fr-FR")}`, margin, 291);
-      doc.text(`Page ${p} / ${pages}`, 210 - margin, 291, { align: "right" });
-    }
-
-    doc.save(`mc2i_${mc2iResponse.reference}_reponse.pdf`);
-  };
-
-  const handleGeneratePptx = () => {
-    const syntheticTender = {
-      id: engieAO.reference,
-      title: engieAO.title,
-      client: engieAO.client,
-      sector: engieAO.sector,
-      status: "pending" as const,
-      consultantsNeeded: 8,
-      price: 1528380,
-      tags: engieAO.keywords,
-      similarityScore: 88,
-      submissionDate: "2025-04-18",
-      responseDate: "2025-05-15",
-      description: engieAO.axes.map((a) => `${a.title} : ${a.description}`).join(" "),
-      aiSummary: `Transformation Data & IA pour la gestion des actifs énergétiques renouvelables ENGIE. ${engieAO.requirements.join(" ")}`,
-      methodology: mc2iResponse.methodologyText,
-      staffing: mc2iResponse.staffingText,
-      differentiators: mc2iResponse.differentiators,
-      duration: engieAO.duration,
-      technologies: engieAO.technologies,
-    };
-    generateTenderPptx(syntheticTender);
   };
 
   const statusColors: Record<string, string> = {
@@ -512,16 +401,6 @@ export default function UploadPage() {
                 <p className="text-sm text-muted-foreground mt-0.5">
                   Basée sur la réponse mc2i — <span className="font-mono font-medium text-foreground">{mc2iResponse.reference}</span>
                 </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" className="gap-2" onClick={handleGeneratePptx}>
-                  <Presentation className="h-4 w-4" />
-                  Rédiger l&apos;AO (.pptx)
-                </Button>
-                <Button variant="outline" className="gap-2" onClick={downloadMc2iPdf}>
-                  <Download className="h-4 w-4" />
-                  Télécharger PDF
-                </Button>
               </div>
             </div>
 
