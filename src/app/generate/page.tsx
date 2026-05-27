@@ -122,6 +122,7 @@ export default function GeneratePage() {
     };
 
     const sectionTitle = (num: string, title: string) => {
+      checkY(20);
       doc.setFontSize(11); doc.setFont("helvetica", "bold"); navy();
       doc.text(`${num}. ${title}`, M, y);
       doc.setDrawColor(197, 40, 28); doc.setLineWidth(0.5);
@@ -132,8 +133,15 @@ export default function GeneratePage() {
     const para = (text: string) => {
       doc.setFontSize(9); doc.setFont("helvetica", "normal"); bodyC();
       const lines = doc.splitTextToSize(text, CW);
-      lines.forEach((line: string) => { doc.text(line, M, y); y += 5; });
+      lines.forEach((line: string) => {
+        if (y > H - 18) { doc.addPage(); y = M; }
+        doc.text(line, M, y); y += 5;
+      });
       y += 3;
+    };
+
+    const checkY = (needed: number) => {
+      if (y + needed > H - 18) { doc.addPage(); y = M; }
     };
 
     const tableHeader = (cols: { label: string; x: number }[], maxW = CW) => {
@@ -285,6 +293,7 @@ export default function GeneratePage() {
       { title: "Module IA-3 : Optimisation du dispatch et trading", desc: "Algorithme d'optimisation de la stratégie d'offre sur les marchés day-ahead et intraday intégrant les prédictions de production, les prix de marché anticipés et les contraintes de réseau. Simulation par apprentissage par renforcement. Gain estimé sur le revenue de trading : +3 à 5%." },
       { title: "Module IA-4 : Jumeaux numériques des parcs éoliens", desc: "Modélisation physique haute-fidélité des éoliennes (aérodynamique, thermique, mécanique) couplée à des modèles de machine learning pour la calibration continue. Simulation en temps réel des conditions d'exploitation pour optimiser le pitch et l'yaw des turbines. Gain de production estimé : +2 à 4%." },
     ].forEach((mod) => {
+      checkY(22);
       doc.setFontSize(9); doc.setFont("helvetica", "bold"); navy();
       doc.text(mod.title, M, y); y += 5;
       para(mod.desc); y += 1;
@@ -309,6 +318,7 @@ export default function GeneratePage() {
       ["Nicolas DUPONT", "DevOps / Cloud", "5 ans", "Azure, Kubernetes, CI/CD, Terraform", "80%"],
       ["Emma FORESTIER", "Consultant Change Mgmt", "6 ans", "Formation, documentation technique", "60%"],
     ].forEach((row, ri) => {
+      checkY(9);
       doc.setFillColor(ri % 2 === 0 ? 247 : 255, ri % 2 === 0 ? 249 : 255, 255);
       doc.rect(M, y, CW, 8, "F");
       doc.setDrawColor(215, 225, 240); doc.setLineWidth(0.1);
@@ -336,6 +346,7 @@ export default function GeneratePage() {
       { title: "Vattenfall — Maintenance prédictive parc offshore (2023–2024)", desc: "Déploiement d'une solution de maintenance prédictive pour 80 éoliennes offshore en mer du Nord. Réduction des arrêts non planifiés de 32%. ROI atteint en 14 mois. Budget : 3,9M€ — 14 consultants mc2i" },
       { title: "TotalEnergies — Jumeaux numériques solaires (2024)", desc: "Modélisation de 15 centrales solaires en France et en Espagne. Optimisation du tracking des panneaux via simulation. Gain de production de 3,2% sur le pilote. Budget : 2,1M€ — 9 consultants mc2i" },
     ].forEach((ref) => {
+      checkY(22);
       doc.setFontSize(9); doc.setFont("helvetica", "bold"); red();
       doc.text(ref.title, M, y); y += 5;
       para(ref.desc); y += 1;
@@ -381,6 +392,7 @@ export default function GeneratePage() {
       "Signature du contrat et kick-off en juillet 2025",
       "Démarrage Phase 1 — Audit & Cartographie des actifs renouvelables",
     ].forEach((b) => {
+      checkY(8);
       doc.setFontSize(9); doc.setFont("helvetica", "normal"); red();
       doc.text("•", M, y); bodyC();
       doc.text(b, M + 5, y, { maxWidth: CW - 5 }); y += 6;

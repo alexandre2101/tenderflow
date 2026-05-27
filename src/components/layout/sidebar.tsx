@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,16 +63,16 @@ export function Sidebar() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="shrink-0"
+              className="shrink-0 flex items-start gap-1.5 select-none"
             >
-              <Image
-                src="/trust2process-logo.svg"
-                alt="Trust2Process"
-                width={160}
-                height={80}
-                className="h-10 w-auto object-contain"
-                priority
-              />
+              <div className="leading-none">
+                <div className="flex items-baseline gap-[5px] leading-none">
+                  <span className="text-[20px] font-black text-[#1a3a8f] tracking-tight leading-none">Trust</span>
+                  <span className="text-[15px] font-black text-[#cc2222] leading-none relative top-[-3px]">2</span>
+                </div>
+                <div className="text-[20px] font-black text-[#1a3a8f] tracking-tight leading-none mt-[2px]">Process</div>
+              </div>
+              <div className="w-[8px] h-[8px] bg-[#cc2222] mt-[13px] flex-shrink-0" />
             </motion.div>
           )}
         </AnimatePresence>
