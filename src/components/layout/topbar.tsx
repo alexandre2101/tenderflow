@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/tenders": "Bibliothèque",
+  "/tenders": "Bibliothèque AO",
   "/upload": "Analyser & Upload",
-  "/generate": "Générateur IA",
+  "/generate": "Réponse AO",
 };
 
 export function Topbar() {
@@ -28,7 +28,7 @@ export function Topbar() {
         <span className="text-muted-foreground">/</span>
         {isDetailPage && (
           <>
-            <span className="text-muted-foreground shrink-0">Bibliothèque</span>
+            <span className="text-muted-foreground shrink-0">Bibliothèque AO</span>
             <span className="text-muted-foreground">/</span>
           </>
         )}

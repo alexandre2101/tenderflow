@@ -28,9 +28,9 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { href: "/tenders", label: "Bibliothèque", icon: FileText },
+  { href: "/tenders", label: "Bibliothèque AO", icon: FileText },
   { href: "/upload", label: "Analyser & Upload", icon: Upload },
-  { href: "/generate", label: "Générateur IA", icon: Sparkles },
+  { href: "/generate", label: "Réponse AO", icon: Sparkles },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
