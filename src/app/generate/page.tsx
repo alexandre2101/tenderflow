@@ -1,20 +1,15 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useDropzone } from "react-dropzone";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  Upload,
-  FileText,
-  CheckCircle2,
-  Loader2,
   Sparkles,
+  FileText,
   Users,
   DollarSign,
   Calendar,
   Clock,
-  ChevronRight,
   BarChart3,
   Layers,
   Brain,
@@ -22,6 +17,7 @@ import {
   Copy,
   Download,
   Presentation,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateTenderPptx } from "@/lib/generate-pptx";
@@ -30,11 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-type Step = "idle" | "selected" | "extracting" | "extracted" | "generating" | "complete";
-
-const STORAGE_STEP_KEY = "ao_step";
-const STORAGE_FILE_KEY = "ao_fileName";
 
 const engieAO = {
   reference: "ENGIE-DSI-2025-089",
@@ -90,6 +81,12 @@ const reusableExtracts = [
   { label: "Éléments différenciants mc2i", source: "MC2I-ENGIE-2025-089", preview: mc2iResponse.differentiators },
 ];
 
+const statusColors: Record<string, string> = {
+  won: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  lost: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20",
+};
+const statusLabels: Record<string, string> = { won: "Gagné", lost: "Perdu" };
+
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.08 } },
@@ -99,81 +96,8 @@ const itemAnim = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45 } },
 };
 
-const statusColors: Record<string, string> = {
-  won: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  lost: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20",
-};
-const statusLabels: Record<string, string> = { won: "Gagné", lost: "Perdu" };
-
 export default function GeneratePage() {
-  const [step, setStep] = useState<Step>("idle");
-  const [progress, setProgress] = useState(0);
-  const [fileName, setFileName] = useState("");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-
-  useEffect(() => {
-    const savedStep = sessionStorage.getItem(STORAGE_STEP_KEY) as Step | null;
-    const savedFile = sessionStorage.getItem(STORAGE_FILE_KEY);
-    if (savedStep && savedStep !== "extracting" && savedStep !== "generating") {
-      setStep(savedStep);
-    }
-    if (savedFile) setFileName(savedFile);
-  }, []);
-
-  useEffect(() => {
-    sessionStorage.setItem(STORAGE_STEP_KEY, step);
-  }, [step]);
-
-  useEffect(() => {
-    if (fileName) sessionStorage.setItem(STORAGE_FILE_KEY, fileName);
-  }, [fileName]);
-
-  const runExtraction = useCallback(() => {
-    setStep("extracting");
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) { clearInterval(interval); setStep("extracted"); return 100; }
-        return p + 4;
-      });
-    }, 70);
-  }, []);
-
-  const runGeneration = useCallback(() => {
-    setStep("generating");
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) { clearInterval(interval); setStep("complete"); return 100; }
-        return p + 3;
-      });
-    }, 80);
-  }, []);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      setFileName(acceptedFiles[0].name);
-      setStep("selected");
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-    },
-    maxFiles: 1,
-    disabled: step !== "idle",
-  });
-
-  const handleReset = () => {
-    setStep("idle");
-    setFileName("");
-    setProgress(0);
-    sessionStorage.removeItem(STORAGE_STEP_KEY);
-    sessionStorage.removeItem(STORAGE_FILE_KEY);
-  };
 
   const handleCopy = (text: string, idx: number) => {
     navigator.clipboard.writeText(text);
@@ -284,383 +208,189 @@ export default function GeneratePage() {
     generateTenderPptx(syntheticTender);
   };
 
-  const isComplete = step === "complete";
-  const hasResults = step === "extracted" || step === "complete";
-
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
       {/* Header */}
-      <motion.div variants={itemAnim} className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight font-[family-name:var(--font-heading)]">
-            Réponse AO
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Déposez un appel d&apos;offres pour extraire ses données clés et générer une suggestion de réponse IA
-          </p>
-        </div>
-        {step !== "idle" && (
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            Nouvel AO
-          </Button>
-        )}
-      </motion.div>
-
-      {/* Drop zone */}
       <motion.div variants={itemAnim}>
-        <Card>
-          <CardContent className="p-8">
-            <div
-              {...(step === "idle" ? getRootProps() : {})}
-              className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center transition-all duration-300 ${
-                step === "idle"
-                  ? `cursor-pointer ${isDragActive ? "border-primary bg-primary/5 scale-[1.02]" : "border-border hover:border-primary/50 hover:bg-accent/30"}`
-                  : "border-border bg-muted/20 cursor-default"
-              }`}
-            >
-              {step === "idle" && <input {...getInputProps()} />}
-
-              <AnimatePresence mode="wait">
-                {step === "idle" && (
-                  <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                      <Upload className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold">
-                        {isDragActive ? "Déposez le fichier ici..." : "Glissez-déposez votre appel d'offres"}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">PDF ou DOCX · 50 Mo max</p>
-                    </div>
-                    <Button variant="outline" size="sm">Parcourir les fichiers</Button>
-                  </motion.div>
-                )}
-
-                {step === "selected" && (
-                  <motion.div key="selected" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10">
-                      <FileText className="h-8 w-8 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold">{fileName}</p>
-                      <p className="text-sm text-muted-foreground mt-1">Fichier prêt pour l&apos;analyse</p>
-                    </div>
-                    <Button onClick={runExtraction} className="gap-2 pulse-glow">
-                      <Brain className="h-4 w-4" />
-                      Extraire les données clés
-                    </Button>
-                  </motion.div>
-                )}
-
-                {(step === "extracting" || step === "generating") && (
-                  <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md space-y-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="font-medium">
-                          {step === "extracting" ? "Extraction des données IA en cours..." : "Génération de la suggestion de réponse..."}
-                        </span>
-                        <span className="text-muted-foreground">{Math.round(progress)}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">{fileName}</p>
-                  </motion.div>
-                )}
-
-                {hasResults && (
-                  <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10">
-                      <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                    </div>
-                    <p className="text-base font-semibold">
-                      {isComplete ? "Analyse complète" : "Extraction terminée"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{fileName}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </CardContent>
-        </Card>
+        <h1 className="text-3xl font-bold tracking-tight font-[family-name:var(--font-heading)]">
+          Réponse AO
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Suggestion de réponse mc2i — <span className="font-mono font-medium text-foreground">{mc2iResponse.reference}</span>
+        </p>
       </motion.div>
 
-      {/* Extracted AO data */}
-      <AnimatePresence>
-        {hasResults && (
-          <motion.div
-            key="extracted"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-5"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold font-[family-name:var(--font-heading)]">Données extraites de l&apos;AO</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Référence détectée : <span className="font-mono font-medium text-foreground">{engieAO.reference}</span></p>
+      {/* Meta cards */}
+      <motion.div variants={itemAnim} className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        {[
+          { icon: FileText, label: "Client", value: engieAO.client },
+          { icon: DollarSign, label: "Budget", value: engieAO.budget },
+          { icon: Clock, label: "Durée", value: engieAO.duration },
+          { icon: Calendar, label: "Date limite", value: engieAO.deadline },
+          { icon: Users, label: "Équipe", value: engieAO.consultantsNeeded },
+          { icon: Layers, label: "Secteur", value: engieAO.sector },
+        ].map((m) => {
+          const Icon = m.icon;
+          return (
+            <Card key={m.label} className="p-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                <Icon className="h-3.5 w-3.5" />
+                <span className="text-xs">{m.label}</span>
               </div>
-              {step === "extracted" && (
-                <Button onClick={runGeneration} className="gap-2 pulse-glow">
-                  <Sparkles className="h-4 w-4" />
-                  Générer une suggestion de réponse
-                </Button>
-              )}
-            </div>
+              <p className="text-sm font-semibold leading-tight">{m.value}</p>
+            </Card>
+          );
+        })}
+      </motion.div>
 
-            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      {/* Tabs */}
+      <motion.div variants={itemAnim}>
+        <Tabs defaultValue="pdf" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="pdf" className="gap-2">
+              <Download className="h-4 w-4" />
+              Télécharger le PDF
+            </TabsTrigger>
+            <TabsTrigger value="pptx" className="gap-2">
+              <Presentation className="h-4 w-4" />
+              Rédiger l&apos;AO
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab 1 — PDF */}
+          <TabsContent value="pdf" className="space-y-5">
+            <div className="grid gap-3 grid-cols-3">
               {[
-                { icon: FileText, label: "Client", value: engieAO.client },
-                { icon: DollarSign, label: "Budget", value: engieAO.budget },
-                { icon: Clock, label: "Durée", value: engieAO.duration },
-                { icon: Calendar, label: "Date limite", value: engieAO.deadline },
-                { icon: Users, label: "Équipe", value: engieAO.consultantsNeeded },
-                { icon: Layers, label: "Secteur", value: engieAO.sector },
-              ].map((m) => {
-                const Icon = m.icon;
-                return (
-                  <Card key={m.label} className="p-4">
-                    <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="text-xs">{m.label}</span>
-                    </div>
-                    <p className="text-sm font-semibold leading-tight">{m.value}</p>
-                  </Card>
-                );
-              })}
+                { label: "Méthodologie", value: mc2iResponse.methodology },
+                { label: "Planning", value: mc2iResponse.phases },
+                { label: "Budget proposé", value: mc2iResponse.totalBudget },
+              ].map((m) => (
+                <Card key={m.label} className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">{m.label}</p>
+                  <p className="text-sm font-bold">{m.value}</p>
+                </Card>
+              ))}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Brain className="h-4 w-4 text-primary" /> Axes de la mission
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {engieAO.axes.map((axis) => (
-                    <div key={axis.title} className="rounded-lg bg-muted/40 p-3 space-y-1">
-                      <p className="text-xs font-bold text-primary">{axis.title}</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{axis.description}</p>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-primary" /> Modules IA proposés
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {mc2iResponse.modules.map((mod) => (
+                    <div key={mod.id} className="rounded-lg border bg-muted/20 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-[10px] font-mono">{mod.id}</Badge>
+                        <span className="text-xs font-semibold text-primary">{mod.accuracy}</span>
+                      </div>
+                      <p className="text-sm font-semibold">{mod.title}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{mod.description}</p>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary" /> Critères clés
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {engieAO.requirements.map((req, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <ChevronRight className="h-3.5 w-3.5 mt-0.5 text-primary shrink-0" />
-                          {req}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
+            <Card className="border-primary/20 bg-primary/3">
+              <CardContent className="p-5">
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Éléments différenciants mc2i</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{mc2iResponse.differentiators}</p>
+              </CardContent>
+            </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-primary" /> Technologies requises
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {engieAO.technologies.map((t) => (
-                        <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {engieAO.keywords.map((kw) => (
-                        <Badge key={kw} variant="outline" className="text-[10px]">{kw}</Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Button className="gap-2" onClick={downloadMc2iPdf}>
+              <Download className="h-4 w-4" />
+              Télécharger la proposition en PDF
+            </Button>
+          </TabsContent>
 
-      {/* Results in two tabs */}
-      <AnimatePresence>
-        {isComplete && (
-          <motion.div
-            key="results-tabs"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="space-y-5"
-          >
+          {/* Tab 2 — PPTX */}
+          <TabsContent value="pptx" className="space-y-6">
+            <Card className="border-primary/30">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-base">Template PowerPoint mc2i</p>
+                    <p className="text-sm text-muted-foreground">7 slides : couverture, présentation, contexte AO, forces, faiblesses, organisation, budget</p>
+                    <p className="text-xs text-muted-foreground mt-1">Référence : <span className="font-mono">{engieAO.reference}</span></p>
+                  </div>
+                  <Button className="gap-2 shrink-0" onClick={handleGeneratePptx}>
+                    <Presentation className="h-4 w-4" />
+                    Générer le .pptx
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <Separator />
 
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold font-[family-name:var(--font-heading)]">
-                Suggestion de réponse IA
-              </h2>
-              <span className="text-sm text-muted-foreground ml-1">— <span className="font-mono font-medium text-foreground">{mc2iResponse.reference}</span></span>
+            <div className="space-y-4">
+              <h3 className="text-base font-bold font-[family-name:var(--font-heading)] flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                Appels d&apos;offres similaires
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {similarAOs.map((ao) => (
+                  <Link key={ao.id} href={`/tenders/${ao.id}`}>
+                    <Card className="p-4 hover:border-primary/40 transition-colors cursor-pointer group h-full">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <Badge className={`${statusColors[ao.status]} border text-xs`} variant="outline">
+                          {statusLabels[ao.status]}
+                        </Badge>
+                        <span className="text-xs font-bold text-primary">{ao.score}%</span>
+                      </div>
+                      <p className="text-sm font-semibold leading-snug mb-1 group-hover:text-primary transition-colors">{ao.title}</p>
+                      <p className="text-xs text-muted-foreground mb-3">{ao.client} · {ao.budget}</p>
+                      <Progress value={ao.score} className="h-1.5" />
+                    </Card>
+                  </Link>
+                ))}
+              </div>
             </div>
 
-            <Tabs defaultValue="pdf" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="pdf" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Télécharger le PDF
-                </TabsTrigger>
-                <TabsTrigger value="pptx" className="gap-2">
-                  <Presentation className="h-4 w-4" />
-                  Rédiger l&apos;appel d&apos;offres
-                </TabsTrigger>
-              </TabsList>
+            <Separator />
 
-              {/* Tab 1 — PDF */}
-              <TabsContent value="pdf" className="space-y-5">
-                <div className="grid gap-3 grid-cols-3">
-                  {[
-                    { label: "Méthodologie", value: mc2iResponse.methodology },
-                    { label: "Planning", value: mc2iResponse.phases },
-                    { label: "Budget proposé", value: mc2iResponse.totalBudget },
-                  ].map((m) => (
-                    <Card key={m.label} className="p-4 text-center">
-                      <p className="text-xs text-muted-foreground mb-1">{m.label}</p>
-                      <p className="text-sm font-bold">{m.value}</p>
-                    </Card>
-                  ))}
-                </div>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Brain className="h-4 w-4 text-primary" /> Modules IA proposés
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {mc2iResponse.modules.map((mod) => (
-                        <div key={mod.id} className="rounded-lg border bg-muted/20 p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className="text-[10px] font-mono">{mod.id}</Badge>
-                            <span className="text-xs font-semibold text-primary">{mod.accuracy}</span>
-                          </div>
-                          <p className="text-sm font-semibold">{mod.title}</p>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{mod.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-primary/20 bg-primary/3">
-                  <CardContent className="p-5">
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Éléments différenciants mc2i</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{mc2iResponse.differentiators}</p>
-                  </CardContent>
-                </Card>
-
-                <Button className="gap-2 w-full sm:w-auto" onClick={downloadMc2iPdf}>
-                  <Download className="h-4 w-4" />
-                  Télécharger la proposition en PDF
-                </Button>
-              </TabsContent>
-
-              {/* Tab 2 — PPTX */}
-              <TabsContent value="pptx" className="space-y-6">
-                <Card className="border-primary/30">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-base">Template PowerPoint mc2i</p>
-                        <p className="text-sm text-muted-foreground">7 slides : couverture, présentation, contexte AO, forces, faiblesses, organisation, budget</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Référence : <span className="font-mono">{engieAO.reference}</span>
-                        </p>
+            <div className="space-y-4">
+              <h3 className="text-base font-bold font-[family-name:var(--font-heading)] flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                Extraits réutilisables
+              </h3>
+              <div className="space-y-3">
+                {reusableExtracts.map((extract, idx) => (
+                  <Card key={idx} className="p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-sm font-semibold">{extract.label}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{extract.source}</p>
                       </div>
-                      <Button className="gap-2 shrink-0" onClick={handleGeneratePptx}>
-                        <Presentation className="h-4 w-4" />
-                        Générer le .pptx
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 shrink-0"
+                        onClick={() => handleCopy(extract.preview, idx)}
+                      >
+                        {copiedIdx === idx ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                        {copiedIdx === idx ? "Copié" : "Copier"}
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="text-base font-bold font-[family-name:var(--font-heading)] flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-primary" />
-                    Appels d&apos;offres similaires
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {similarAOs.map((ao) => (
-                      <Link key={ao.id} href={`/tenders/${ao.id}`}>
-                        <Card className="p-4 hover:border-primary/40 transition-colors cursor-pointer group h-full">
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <Badge className={`${statusColors[ao.status]} border text-xs`} variant="outline">
-                              {statusLabels[ao.status]}
-                            </Badge>
-                            <span className="text-xs font-bold text-primary">{ao.score}%</span>
-                          </div>
-                          <p className="text-sm font-semibold leading-snug mb-1 group-hover:text-primary transition-colors">{ao.title}</p>
-                          <p className="text-xs text-muted-foreground mb-3">{ao.client} · {ao.budget}</p>
-                          <Progress value={ao.score} className="h-1.5" />
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="text-base font-bold font-[family-name:var(--font-heading)] flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    Extraits réutilisables
-                  </h3>
-                  <div className="space-y-3">
-                    {reusableExtracts.map((extract, idx) => (
-                      <Card key={idx} className="p-5">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div>
-                            <p className="text-sm font-semibold">{extract.label}</p>
-                            <p className="text-xs text-muted-foreground font-mono mt-0.5">{extract.source}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 shrink-0"
-                            onClick={() => handleCopy(extract.preview, idx)}
-                          >
-                            {copiedIdx === idx ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                            {copiedIdx === idx ? "Copié" : "Copier"}
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/40 rounded-lg p-3">
-                          {extract.preview}
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                    <p className="text-xs text-muted-foreground leading-relaxed bg-muted/40 rounded-lg p-3">
+                      {extract.preview}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
     </motion.div>
   );
 }
+
